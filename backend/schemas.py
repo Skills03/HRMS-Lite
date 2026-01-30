@@ -67,6 +67,13 @@ class AttendanceListResponse(BaseModel):
 
 
 # Dashboard Schemas
+class DailyAttendance(BaseModel):
+    date: date
+    present: int
+    absent: int
+    rate: float
+
+
 class DashboardStats(BaseModel):
     total_employees: int
     total_departments: int
@@ -74,6 +81,7 @@ class DashboardStats(BaseModel):
     todays_absent: int
     todays_unmarked: int
     attendance_rate: float
+    recent_trend: list[DailyAttendance] = []
 
 
 # Error Response

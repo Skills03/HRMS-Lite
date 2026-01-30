@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 import uuid
 
@@ -16,6 +16,7 @@ from schemas import (
     AttendanceResponse,
     AttendanceListResponse,
     DashboardStats,
+    DailyAttendance,
     ErrorResponse,
 )
 
@@ -368,6 +369,22 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         else 0
     )
 
+    # Get last 7 days trend
+    recent_trend = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_attendance = db.query(Attendance).filter(Attendance.date == day).all()
+        day_present = sum(1 for a in day_attendance if a.status == ModelAttendanceStatus.PRESENT)
+        day_absent = sum(1 for a in day_attendance if a.status == ModelAttendanceStatus.ABSENT)
+        day_total = day_present + day_absent
+        day_rate = (day_present / day_total * 100) if day_total > 0 else 0
+        recent_trend.append(DailyAttendance(
+            date=day,
+            present=day_present,
+            absent=day_absent,
+            rate=round(day_rate, 1),
+        ))
+
     return DashboardStats(
         total_employees=total_employees,
         total_departments=departments,
@@ -375,6 +392,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         todays_absent=todays_absent,
         todays_unmarked=todays_unmarked,
         attendance_rate=round(attendance_rate, 1),
+        recent_trend=recent_trend,
     )
 
 

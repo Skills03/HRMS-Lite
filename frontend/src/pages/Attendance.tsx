@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { CalendarCheck, Filter, UserCheck, UserX, Calendar } from 'lucide-react';
+import { CalendarCheck, Filter, UserCheck, UserX, Calendar, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getEmployees, getAttendance, markAttendance } from '../services/api';
 import type { Employee, AttendanceRecord, CreateAttendanceData } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonTable } from '../components/Skeleton';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
+import Avatar from '../components/Avatar';
 
 export default function Attendance() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -48,7 +51,7 @@ export default function Attendance() {
       setAttendance(attData.records);
       setTotalPresent(attData.total_present);
       setTotalAbsent(attData.total_absent);
-    } catch (err) {
+    } catch {
       setError('Failed to load attendance data');
     } finally {
       setLoading(false);
@@ -98,48 +101,48 @@ export default function Attendance() {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Loading attendance records..." />;
+  if (loading) return <SkeletonTable />;
   if (error) return <ErrorState message={error} onRetry={fetchData} />;
 
   const hasFilters = filterEmployeeId || filterStartDate || filterEndDate;
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
           <p className="mt-1 text-sm text-gray-500">
             Track and manage employee attendance
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setIsMarkModalOpen(true)}
           disabled={employees.length === 0}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          leftIcon={<CalendarCheck className="w-4 h-4" />}
         >
-          <CalendarCheck className="w-4 h-4 mr-2" />
           Mark Attendance
-        </button>
+        </Button>
       </div>
 
       {/* Stats Summary */}
       {attendance.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Total Records</p>
-            <p className="text-xl font-semibold text-gray-900">{attendance.length}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-500">Total Records</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900">{attendance.length}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Present</p>
-            <p className="text-xl font-semibold text-green-600">{totalPresent}</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-500">Present</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">{totalPresent}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Absent</p>
-            <p className="text-xl font-semibold text-red-600">{totalAbsent}</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-500">Absent</p>
+            <p className="mt-1 text-2xl font-bold text-rose-600">{totalAbsent}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Attendance Rate</p>
-            <p className="text-xl font-semibold text-indigo-600">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-500">Attendance Rate</p>
+            <p className="mt-1 text-2xl font-bold text-indigo-600">
               {attendance.length > 0
                 ? `${((totalPresent / attendance.length) * 100).toFixed(1)}%`
                 : '0%'}
@@ -149,18 +152,26 @@ export default function Attendance() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-4 h-4 text-gray-500" />
-          <h3 className="text-sm font-medium text-gray-700">Filter Records</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Filter Records</h3>
+          {hasFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="ml-auto text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Clear all
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Employee</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Employee</label>
             <select
               value={filterEmployeeId}
               onChange={(e) => setFilterEmployeeId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             >
               <option value="">All Employees</option>
               {employees.map((emp) => (
@@ -171,42 +182,32 @@ export default function Attendance() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Start Date</label>
             <input
               type="date"
               value={filterStartDate}
               onChange={(e) => setFilterStartDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">End Date</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">End Date</label>
             <input
               type="date"
               value={filterEndDate}
               onChange={(e) => setFilterEndDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             />
           </div>
-          <div className="flex items-end gap-2">
-            <button
-              onClick={handleFilter}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-            >
-              Apply
-            </button>
-            {hasFilters && (
-              <button
-                onClick={handleClearFilters}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Clear
-              </button>
-            )}
+          <div className="flex items-end">
+            <Button onClick={handleFilter} className="w-full">
+              Apply Filters
+            </Button>
           </div>
         </div>
       </div>
 
+      {/* Content */}
       {employees.length === 0 ? (
         <EmptyState
           icon={CalendarCheck}
@@ -229,35 +230,40 @@ export default function Attendance() {
           }
         />
       ) : (
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Employee
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {attendance.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {record.employee_name || record.employee_id}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        ID: {record.employee_id}
+                      <div className="flex items-center gap-3">
+                        <Avatar name={record.employee_name || record.employee_id} size="sm" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {record.employee_name || record.employee_id}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            ID: {record.employee_id}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm font-medium text-gray-900">
                         {new Date(record.date).toLocaleDateString('en-US', {
                           weekday: 'short',
                           year: 'numeric',
@@ -268,15 +274,15 @@ export default function Attendance() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {record.status === 'Present' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <Badge variant="green">
                           <UserCheck className="w-3 h-3 mr-1" />
                           Present
-                        </span>
+                        </Badge>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <Badge variant="red">
                           <UserX className="w-3 h-3 mr-1" />
                           Absent
-                        </span>
+                        </Badge>
                       )}
                     </td>
                   </tr>
@@ -300,71 +306,84 @@ export default function Attendance() {
         }}
         title="Mark Attendance"
       >
-        <form onSubmit={handleMarkAttendance}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Employee <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.employee_id}
-                onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        <form onSubmit={handleMarkAttendance} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Employee <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.employee_id}
+              onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            >
+              <option value="">Select an employee</option>
+              {employees.map((emp) => (
+                <option key={emp.employee_id} value={emp.employee_id}>
+                  {emp.full_name} ({emp.employee_id})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-4">
+              <label
+                className={`flex-1 flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  formData.status === 'Present'
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
               >
-                <option value="">Select an employee</option>
-                {employees.map((emp) => (
-                  <option key={emp.employee_id} value={emp.employee_id}>
-                    {emp.full_name} ({emp.employee_id})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Date <span className="text-red-500">*</span>
+                <input
+                  type="radio"
+                  value="Present"
+                  checked={formData.status === 'Present'}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value as 'Present' | 'Absent' })
+                  }
+                  className="sr-only"
+                />
+                <UserCheck className="w-5 h-5" />
+                <span className="font-medium">Present</span>
               </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Status <span className="text-red-500">*</span>
+              <label
+                className={`flex-1 flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  formData.status === 'Absent'
+                    ? 'border-rose-500 bg-rose-50 text-rose-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  value="Absent"
+                  checked={formData.status === 'Absent'}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value as 'Present' | 'Absent' })
+                  }
+                  className="sr-only"
+                />
+                <UserX className="w-5 h-5" />
+                <span className="font-medium">Absent</span>
               </label>
-              <div className="mt-2 flex gap-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="Present"
-                    checked={formData.status === 'Present'}
-                    onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value as 'Present' | 'Absent' })
-                    }
-                    className="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Present</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="Absent"
-                    checked={formData.status === 'Absent'}
-                    onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value as 'Present' | 'Absent' })
-                    }
-                    className="form-radio h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Absent</span>
-                </label>
-              </div>
             </div>
           </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <button
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setIsMarkModalOpen(false);
                 setFormData({
@@ -373,17 +392,12 @@ export default function Attendance() {
                   status: 'Present',
                 });
               }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Saving...' : 'Mark Attendance'}
-            </button>
+            </Button>
+            <Button type="submit" isLoading={isSubmitting}>
+              Mark Attendance
+            </Button>
           </div>
         </form>
       </Modal>

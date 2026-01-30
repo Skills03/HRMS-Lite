@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import Modal from './Modal';
+import Button from './Button';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -23,26 +24,18 @@ export default function ConfirmDialog({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
+        <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+          <AlertTriangle className="w-6 h-6 text-red-600" />
         </div>
-        <p className="text-sm text-gray-600">{message}</p>
+        <p className="text-sm text-gray-600 pt-2">{message}</p>
       </div>
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          disabled={isLoading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
+      <div className="mt-8 flex justify-end gap-3">
+        <Button variant="secondary" onClick={onClose} disabled={isLoading}>
           Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={isLoading}
-          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-        >
-          {isLoading ? 'Deleting...' : confirmLabel}
-        </button>
+        </Button>
+        <Button variant="danger" onClick={onConfirm} isLoading={isLoading}>
+          {confirmLabel}
+        </Button>
       </div>
     </Modal>
   );

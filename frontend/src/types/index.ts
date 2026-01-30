@@ -27,6 +27,13 @@ export interface AttendanceListResponse {
   total_absent: number;
 }
 
+export interface DailyAttendance {
+  date: string;
+  present: number;
+  absent: number;
+  rate: number;
+}
+
 export interface DashboardStats {
   total_employees: number;
   total_departments: number;
@@ -34,6 +41,7 @@ export interface DashboardStats {
   todays_absent: number;
   todays_unmarked: number;
   attendance_rate: number;
+  recent_trend: DailyAttendance[];
 }
 
 export interface CreateEmployeeData {
