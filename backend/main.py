@@ -48,34 +48,38 @@ def health_check():
 def get_employees(db: Session = Depends(get_db)):
     employees = db.query(Employee).all()
 
-    employee_responses = []
-    for emp in employees:
-        present_count = (
-            db.query(Attendance)
-            .filter(
-                Attendance.employee_id == emp.employee_id,
-                Attendance.status == ModelAttendanceStatus.PRESENT,
-            )
-            .count()
+    # Single query to get all attendance counts
+    attendance_stats = (
+        db.query(
+            Attendance.employee_id,
+            Attendance.status,
+            func.count(Attendance.id).label('count')
         )
-        absent_count = (
-            db.query(Attendance)
-            .filter(
-                Attendance.employee_id == emp.employee_id,
-                Attendance.status == ModelAttendanceStatus.ABSENT,
-            )
-            .count()
+        .group_by(Attendance.employee_id, Attendance.status)
+        .all()
+    )
+
+    # Build lookup dict
+    stats_map = {}
+    for stat in attendance_stats:
+        if stat.employee_id not in stats_map:
+            stats_map[stat.employee_id] = {'present': 0, 'absent': 0}
+        if stat.status == ModelAttendanceStatus.PRESENT:
+            stats_map[stat.employee_id]['present'] = stat.count
+        else:
+            stats_map[stat.employee_id]['absent'] = stat.count
+
+    employee_responses = [
+        EmployeeResponse(
+            employee_id=emp.employee_id,
+            full_name=emp.full_name,
+            email=emp.email,
+            department=emp.department,
+            total_present=stats_map.get(emp.employee_id, {}).get('present', 0),
+            total_absent=stats_map.get(emp.employee_id, {}).get('absent', 0),
         )
-        employee_responses.append(
-            EmployeeResponse(
-                employee_id=emp.employee_id,
-                full_name=emp.full_name,
-                email=emp.email,
-                department=emp.department,
-                total_present=present_count,
-                total_absent=absent_count,
-            )
-        )
+        for emp in employees
+    ]
 
     return EmployeeListResponse(employees=employee_responses, total=len(employees))
 
@@ -338,50 +342,69 @@ def update_attendance(
 @app.get("/api/dashboard", response_model=DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
     total_employees = db.query(Employee).count()
-
     departments = db.query(Employee.department).distinct().count()
 
     today = date.today()
+    week_ago = today - timedelta(days=6)
 
-    todays_attendance = (
-        db.query(Attendance).filter(Attendance.date == today).all()
+    # Single query for all attendance in last 7 days
+    recent_attendance = (
+        db.query(
+            Attendance.date,
+            Attendance.status,
+            func.count(Attendance.id).label('count')
+        )
+        .filter(Attendance.date >= week_ago)
+        .group_by(Attendance.date, Attendance.status)
+        .all()
     )
 
-    todays_present = sum(
-        1 for a in todays_attendance if a.status == ModelAttendanceStatus.PRESENT
-    )
-    todays_absent = sum(
-        1 for a in todays_attendance if a.status == ModelAttendanceStatus.ABSENT
-    )
-    todays_unmarked = total_employees - len(todays_attendance)
+    # Build daily stats map
+    daily_stats = {}
+    for record in recent_attendance:
+        if record.date not in daily_stats:
+            daily_stats[record.date] = {'present': 0, 'absent': 0}
+        if record.status == ModelAttendanceStatus.PRESENT:
+            daily_stats[record.date]['present'] = record.count
+        else:
+            daily_stats[record.date]['absent'] = record.count
 
-    # Calculate overall attendance rate
-    total_attendance_records = db.query(Attendance).count()
-    total_present = (
-        db.query(Attendance)
-        .filter(Attendance.status == ModelAttendanceStatus.PRESENT)
-        .count()
+    # Today's stats
+    today_stats = daily_stats.get(today, {'present': 0, 'absent': 0})
+    todays_present = today_stats['present']
+    todays_absent = today_stats['absent']
+    todays_unmarked = total_employees - (todays_present + todays_absent)
+
+    # Overall attendance rate (single query)
+    total_stats = (
+        db.query(
+            Attendance.status,
+            func.count(Attendance.id).label('count')
+        )
+        .group_by(Attendance.status)
+        .all()
     )
 
-    attendance_rate = (
-        (total_present / total_attendance_records * 100)
-        if total_attendance_records > 0
-        else 0
-    )
+    total_present = 0
+    total_records = 0
+    for stat in total_stats:
+        total_records += stat.count
+        if stat.status == ModelAttendanceStatus.PRESENT:
+            total_present = stat.count
 
-    # Get last 7 days trend
+    attendance_rate = (total_present / total_records * 100) if total_records > 0 else 0
+
+    # Build 7-day trend
     recent_trend = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
-        day_attendance = db.query(Attendance).filter(Attendance.date == day).all()
-        day_present = sum(1 for a in day_attendance if a.status == ModelAttendanceStatus.PRESENT)
-        day_absent = sum(1 for a in day_attendance if a.status == ModelAttendanceStatus.ABSENT)
-        day_total = day_present + day_absent
-        day_rate = (day_present / day_total * 100) if day_total > 0 else 0
+        day_stats = daily_stats.get(day, {'present': 0, 'absent': 0})
+        day_total = day_stats['present'] + day_stats['absent']
+        day_rate = (day_stats['present'] / day_total * 100) if day_total > 0 else 0
         recent_trend.append(DailyAttendance(
             date=day,
-            present=day_present,
-            absent=day_absent,
+            present=day_stats['present'],
+            absent=day_stats['absent'],
             rate=round(day_rate, 1),
         ))
 
