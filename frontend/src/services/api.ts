@@ -9,7 +9,10 @@ import type {
   CreateAttendanceData,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Use proxy in production, direct URL in development
+const API_BASE_URL = import.meta.env.PROD
+  ? '/api/proxy'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:8000');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
