@@ -4,8 +4,7 @@ A lightweight Human Resource Management System for managing employee records and
 
 ## Live Demo
 
-- **Frontend**: [Your Vercel URL]
-- **Backend API**: [Your Render URL]
+**Live Application:** https://hrms-lite.duckdns.org
 
 ## Tech Stack
 
@@ -116,26 +115,24 @@ The app will be available at `http://localhost:3000`
 
 ## Deployment
 
-### Backend (Render)
+The application is deployed on AWS EC2 with the following setup:
 
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Set the following:
-   - **Root Directory**: `backend`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Deploy
+- **Server**: AWS EC2 (t2.micro)
+- **Web Server**: Caddy (reverse proxy + auto SSL)
+- **Domain**: DuckDNS (free subdomain)
+- **SSL**: Auto-provisioned via Let's Encrypt
 
-### Frontend (Vercel)
-
-1. Import your GitHub repository to Vercel
-2. Set the following:
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-3. Add environment variable:
-   - `VITE_API_URL` = Your Render backend URL
-4. Deploy
+### Architecture
+```
+https://hrms-lite.duckdns.org
+        │
+        ▼
+    [Caddy - HTTPS]
+        │
+        ├── /api/*  →  FastAPI (port 8000)
+        │
+        └── /*      →  Static files (React build)
+```
 
 ## Assumptions & Limitations
 
